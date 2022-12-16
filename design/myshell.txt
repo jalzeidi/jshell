@@ -1,0 +1,220 @@
+/************************************************************************/
+//jshell.c
+
+main(int argc, string argv[])
+  struct builtins b[NUM_OF_BUILTINS]
+  store_builtins(b, NUM_OF_BUILTINS)
+  if shell was invoked with no arg, call interactive()
+  else if shell was invoked with one arg, call batch()
+  else fail: invalid args
+  *NOTE: in this context, no arg means 1 arg (executable name is always passed as an arg)
+         furthermore, 1 arg is actually 2, and so on
+
+void store_builtins(struct builtins *b, int num_of_builtins)
+  store built-in commands in an array of structs, each struct contains the name of the command
+  and the corresponding function for the command
+  b[0] = {"cd", change_cwd()}
+  b[1] = {"clear", clear_screen()}
+  b[...] = {"", }
+  b[num_of_builtins] = {"", }
+
+void interactive(struct builtins b[])
+  while true
+    print shell prompt "jshell> "
+    get keyboard input
+    check if the input is "exit" or EOF, in this case we exit with code 0
+    tokenize input on spaces and tabs by calling tokenize_command()
+    parse the tokens (determine how to run the command) by calling parse_command(), we get an array of structs
+    containing instructions on how to run each program
+    run_command(b)
+    
+void batch(struct builtins b[], string filename)
+  open the file at filename
+  while the next line is not EOF
+    tokenize the line by calling tokenize_command()
+    parse the tokens (determine how to run the command) by calling parse_command(), we get an array of structs
+    containing instructions on how to run each program
+    run_command(b)
+
+void find_builtin(char *command, int *ibuiltin, struct builtins b[], b_size)
+  for every command in b
+    if command found
+      store command index in *ibuiltin
+      return
+
+void find_command(char *command, char *executable_path)
+  for every string s in path
+    if s concat command is a valid command
+      executable_path = s concat command
+      return
+  if command is a valid executable in the current directory
+      executable_path = current directory concat command
+
+KEEP TRACK OF THE FOLLOWING:
+pipefd[2]
+stdin_cpy
+stdout_cpy
+executable_path
+
+void free_resources(int *pipefd, int stdin_cpy, int stdout_cpy, char *executable_path)
+  if(pipefd[0] != -1) close pipefd[0]
+  if(pipefd[1] != -1) close pipefd[1]
+  if stdin_cpy != -1 close stdin_cpy
+  if stdout_cpy != -1 close stdout_cpy
+  if executable_path != NULL free(executable_path)
+
+int run_command(struct program_variables** pvs, int pvs_size, struct builtins b[], b_size)
+  pipefd[2]
+  for i = 0 to pvs_size - 1
+    int stdin_cpy = -1
+    int stdout_cpy = -1
+    string executable_path = null
+    int ibuiltin = -1
+
+    if contains_slash
+      check if pvs[i].argv[0] is a path to a valid executable
+    else
+      find_builtin(...)
+      if ibuiltin == -1
+        find_executable
+        if find_executable == NULL
+          search for program in current directory
+
+    if executable_path is null and ibuiltin == -1
+      if this is not the first program, and the previous program is piped
+        close(pipe[0])
+      return -1
+
+    if previous program is piped or this program has an input_file
+      stdin_cpy = copy of stdin
+    if this program is piped or this program has an output_file
+      stdout_cpy = copy of stdout
+
+    if this is not the first program, and the previous program is piped
+      connect stdin to pipe[0]
+      close(pipe[0])
+    if this program is piped
+      create a pipe at pipefd
+      connect stdout to pipe[1]
+      close pipe[1]
+    open output_file, if exists, in either append mode or truncate mode based on append_output
+    if ibuiltin == -1
+      open input_file as stdin
+    if ibuiltin == -1 || is_piped || is_daemon
+      fork()
+      if parent
+        reset stdout and stdin
+        if program.is_daemon
+          don't wait on child to finish execution, only wait to free zombie
+        else
+          wait on child to finish execution
+      else if child
+        if program is_piped
+          close[0]
+        if ibuiltin == -1
+          b[ibuilt_in].func()
+          exit(0)
+        else
+          execv(..., argv)
+    else
+      b[ibuilt_in].func()
+      reset stdout and stdin
+    return 0;
+
+/************************************************************************/
+//command_parser.c
+
+struct program_variables {
+  string argv[]          --> program specific args (null-terminated), first arg is executable name
+  int argc               --> number of elements (strings) in argv
+  string input_file      --> new stdin (<)
+  string output_file     --> new stdout (>, >>)
+  boolean append_output  --> if true, we append the output to the outputFile, otherwise we truncate 
+                             outputFile and overwrite it (>>)
+  boolean is_piped       --> if true, the output of this program is the input to the next (|)
+  boolean is_daemon      --> if true, run process in background (&)
+}
+
+string tokenize_command(string commandline, int size, int next)
+  use strtok to break the commandline into whitespace-separated tokens
+  insert null to the end of the vector
+  store tokens in a vector, resizing as needed, then return the vector
+  size and next are used to check if vector needs resizing
+
+struct program_variables **parse_command(string tokens[], int size)
+  int arg_start = 0
+  boolean found_args = false
+  int next = 0
+  struct program_variables **pvs = allocate an array of 1 pointer to struct program_variables
+  pvs[next].argv = tokens + arg_start
+  for i = 0 to size - 1
+    if tokens[i] is '<' or '>' or '>>' or '&' or '|':
+      char token = *tokens[i]
+      if token is '<' or '>' or '>>' or '|':
+        if i + 1 > size or i - 1 < 0 throw error because redirections and pipes can't be the first or last tokens
+
+      if not found_args
+        tokens[i] = null
+        found_args = true
+        pvs[next].argc = i
+
+      if token is '<': 
+        pvs[next].input_file = tokens[i + 1]
+        increment i to skip next token, because we already handled it as the input_file
+      else if token is '>' or '>>': 
+        pvs[next].output_file = tokens[i + 1]
+        increment i to skip next token, because we already handled it as the input_file
+        if '>': pvs[next].append_output = false
+        else: pvs[next].append_output = true
+      else if token is '&' or '|':
+        if token is '&':
+          pvs[next].is_daemon = true
+        if token is '|': 
+          pvs[next].is_piped = true;
+        arg_start = i + 1
+        arg_end = size
+        next++
+        resize pvs as needed
+        pvs[next].argv = tokens + arg_start
+  return pvs;
+
+/**************************************************************************************************************/
+built-ins.c
+
+void change_cwd(int argc, string argv[])
+  if argc is not 2 print error
+  change the current working directory and PWD environment variable to argv[1]
+
+void clear_screen(int argc, string argv[])
+  if argc is not 1 print error
+  use ANSI escape sequence to clear terminal screen
+
+void list_dir(int argc, string argv[])
+  if argc is not 2 print error
+  open the directory at argv[1] and print all of its entries' names
+
+void list_env(int argc, string argv[])
+  if argc is not 1 print error
+  display all environment variables
+
+void echo(int argc, string argv[])
+  if argc is not 2 print error
+  if s[0] == '$', search the environment for a variable that matches string 's' and display it
+  otherwise display s
+
+void help(int argc, string argv[])
+  if argc is not 1 print error
+  open the readme for this shell with the more command
+
+void pause(int argc, string argv[])
+  if argc is not 1 print error
+  char input
+    while((input = getchar()) != ENTER)
+      wait until ENTER is pressed
+
+void set_path(int argc, string argv[])
+  sets the PATH environment variable to argv[1]
+
+void quit(int argc, string argv[])
+  if argc is not 1 print error
+  hehe, not much to say, simply quit the shell program

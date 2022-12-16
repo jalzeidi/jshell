@@ -1,0 +1,144 @@
+                                          jshell
+NAME
+       jshell - simple shell
+
+SYNOPSIS
+       jshell [batch_file]
+
+DESCRIPTION
+       jshell is a basic shell, its primary use is to take user commands and execute them.
+       Most commands are programs that live on the system, the shell simply finds and runs
+       those programs.
+       Commands that are not executables on the system are built-in shell functions.
+       Please see the BUILT-INS section for information about shell built-ins
+
+       jshell uses two different modes:
+       INTERACTIVE - Continuously prompts for commands until user exits
+       BATCH - Uses a text file to execute commands, commands are newline-separated
+
+OPERATORS
+       Operators tell the shell how to run a program. By default, most programs run
+       using the keyboard as input and the screen as output. The redirection operators
+       (>, >>, <) allow us to change that default behavior. Moreso, the pipe operator (|)
+       allows us to send a program's output to another program's input.
+
+       By default, the shell waits on the command to finish executing before prompting
+       another command. The background processing operator (&) lets us change that.
+       Say you have a program which runs for a long period of time. You may want to run it
+       and continue working on the shell. That can be achieved using (&). Another useful
+       aspect of background processing is that you get to run multiple programs in the
+       background! How cool is that? 
+
+       The shell supports 5 different operators:
+       OPERATOR   DESCRIPTION
+          >       Writes the output of a program to a specified file on the system
+	  	  If the file doesn't exist, it is created. 
+		  If the file exists, it is overwritten.
+          >>      Same as above, except that if the file exists, output is added to the end
+	  	  of the file.
+          <   	  Program will take input from a specified file rather than keyboard
+          |   	  Program to the left side of this operator will dump its output in a
+	  	  space in memory that is accessible to the program on the right side
+		  of this operator. The program to the right reads the output of the
+		  program to the left and uses it as input.
+	  &	  Program runs in the background. Shell will run the program then return
+	  	  immediately to take more commands.
+
+COMMAND SYNTAX
+       program [args] [>> OR >] [filename] [<] [filename] [| or &] program2...
+       
+       program:  name or path of an executable, or otherwise name of a shell built-in
+       args:     the arguments specific to the program, optional for some commands
+       filename: name of the file that is the new input or output file, used in
+       		 conjunction with >>, >, <
+       program2: another command that can also follow the same syntax above
+
+       *NOTE* A second command on the same line can only be run after a | or & operator,
+       otherwise ONLY one command can be run at a time
+        
+COMMAND EXAMPLES
+       When executing, the shell prints the following prompt: jshell>
+       To run a command, first enter its name, then enter its arguments, followed
+       by shell optional shell operators.
+
+       jshell> echo hello world!
+       hello world! 
+
+       jshell> ls > out
+       The ls command with not args lists contents of the current working directory,
+       when used with the operator '>' it sends the output to a file called 'out'
+
+       jshell> program1 & program2 &
+       Runs both program1 and program2 in the background
+
+       jshell> program1 & program2
+       Runs program1 in the background, but waits for program2 to finish (foreground)
+
+       jshell> cat < in > out
+       Reads contents of 'in' and writes writes them to 'out'
+
+       jshell> cat file | grep hello
+       Sends the contents of 'file' to the program 'grep' which searches the file for
+       lines that include the word 'hello'. If matching lines are found, they are printed
+
+BUILT-INS
+       The shell supports a few built-in commands (commands that are not executables on the
+       system)
+
+       - cd <directory>
+       	   Changes the current working directory to <directory>, if not arguments are
+	   present, the directory isn't changed
+       
+       - clr
+       	   Clears the screen
+
+       - dir <directory>
+           List contents of <directory> if that argument is present, otherwise list
+	   contents of current working directory
+       
+       - environ
+       	   List all environment variables and their corresponding values
+
+       - echo <comment>
+           Print <comment>. If <comment> starts with '$', search the environment
+	   for a variable named <comment>, excluding the '$'.
+
+	   Example: echo $PWD searches the environment for PWD and displays its value
+	   if it exists
+
+       - help
+           Display the user manual, essentially this document
+
+       - pause
+           Pause shell operation until the ENTER key is hit
+
+       - quit
+           Quits the shell
+
+BATCH
+       Batch mode is not much different from interactive mode. Call the shell executable
+       the following way:
+
+       jshell batch
+
+       Where 'jshell' is the path to the shell executable and 'batch' is the file to read
+       commands from.
+
+       The structure of batch is as follows:
+       command1
+       command2
+       command3
+
+       The commands must be newline separated.
+       Each command follows the same syntax described in COMMAND SYNTAX
+       If a failure occurs while executing any of the commands, the shell is terminated
+
+       Sample batch file
+       ******************
+       ls -la
+       echo hello!
+       cat < in > out
+       ******************
+
+AUTHOR
+       Written by Jaffar Alzeidi

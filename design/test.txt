@@ -1,0 +1,85 @@
+Ideas?
+* >, >>, < belong to a single program
+* &, | delimit programs, in other words when any of '&' or '|' are spotted, any subsequent arguments belong to a
+  new program
+* 
+
+"programname arg1 arg2 arg3 < input > output"
+
+After tokenizing:
+tokens[0] = "programname" --> search for this program, if it doesn't exist, throw error
+tokens[1] = "arg1"
+tokens[2] = "arg2"
+tokens[3] = "arg3"
+
+tokens[4] = "<"           --> this tells the shell that 'programname' has a new stdin other than keyboard
+tokens[5] = "input"       --> this is the input file to replace keyboard
+tokens[6] = ">"           --> this tel
+tokens[7] = "output"      --> 
+
+"cat out.txt | wc –l"
+
+After tokenizing:
+tokens[0] = cat           --> 
+tokens[1] = out.txt
+tokens[2] = |
+tokens[3] = wc
+tokens[4] = -l
+
+"cat -p -s out.txt |"
+
+Approach:
+Store program variables in a struct, create an array of this struct, start the array at a reasonable size.
+Since we devs love the number 2, and its powers, how about start at 2^0? After all, most of the time, users
+will launch a single program, if they launch more, we can double our array, since it's dynamic!
+
+struct program_variables {
+  string argv[]          --> vector of program specific args
+  string input_file      --> replaces keyboard for stdin (input redirection)
+  string output_file     --> replaces screen for stdout (output redirection)
+  boolean append_output  --> if true, we append the output to the outputFile, otherwise we truncate outputFile
+                             and overwrite it
+  boolean is_piped       --> if true, we know that the output of this program is the input to the next
+  boolean is_daemon      --> if true, run process in background
+}
+
+/**************************************************************************************************************/
+
+"cat out.txt | wc –l | grep -u"
+
+struct program_variables **pvs;
+pvs[0] = {
+  string argv[] = {"cat", "out.txt"}
+  string input_file = NULL
+  string output_file = NULL
+  boolean append_output = false
+  boolean is_piped = true
+  boolean is_daemon = false
+}
+
+pvs[1] = {
+  string argv[] = {"wc", "-l"}
+  string input_file = NULL
+  string output_file = NULL
+  boolean append_output = false
+  boolean is_piped = true
+  boolean is_daemon = false
+}
+
+pvs[2] = {
+  string argv[] = {"wc", "-l"}
+  string input_file = NULL
+  string output_file = NULL
+  boolean append_output = false
+  boolean is_piped = false
+  boolean is_daemon = false
+}
+
+"cat out.txt | wc –l | grep -u"
+
+for very pv in pvs
+  if is_piped
+    create a pipe
+    set pv.out_pipe = pipefd[1]
+    set pv + 1.in_pipe = pipefd[0]
+    

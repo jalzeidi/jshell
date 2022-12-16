@@ -1,0 +1,8 @@
+/req/
+/bin/
+/src/*.o
+/src/makefile
+/src/jshell
+/design/test_plan.txt
+/test/
+/src/test/

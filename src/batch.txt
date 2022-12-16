@@ -1,0 +1,2 @@
+ls -la | grep batch.txt
+echo ibn sina
